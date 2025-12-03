@@ -142,4 +142,22 @@
   .gradient-accent {
     @apply bg-linear-to-r from-primary to-accent;
   }
+
+  .custom-select-arrow {
+    background-image: url("data:image/svg+xml;utf8,<svg fill='none' stroke='%23666' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 16px;
+  }
+
+  /* Hilangkan default arrow di browser */
+  .custom-select-arrow::-ms-expand {
+    display: none;
+  }
+
+  .custom-select-arrow {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
 }
