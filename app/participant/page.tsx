@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Calendar, Users, Filter } from "lucide-react";
 import Link from "next/link";
@@ -14,7 +14,15 @@ interface Student {
   hari: string;
 }
 
-// Dummy fix
+interface SessionGroup {
+  waktu: string;
+  hari: string;
+  subjek: string[];
+  tutor: string[];
+  students: Student[];
+}
+
+// Sample data
 const mockStudents: Student[] = [
   {
     id: "1",
@@ -48,11 +56,125 @@ const mockStudents: Student[] = [
     sesi: "2",
     hari: "2024-01-08",
   },
+  {
+    id: "5",
+    nama: "Eka Putri",
+    kelas: "11 (A)",
+    mataPelajaran: "Biologi",
+    sesi: "3",
+    hari: "2024-01-08",
+  },
+  {
+    id: "6",
+    nama: "Fajar Rahman",
+    kelas: "9 (C)",
+    mataPelajaran: "Bahasa Inggris",
+    sesi: "3",
+    hari: "2024-01-09",
+  },
+  {
+    id: "7",
+    nama: "Gita Santoso",
+    kelas: "11 (B)",
+    mataPelajaran: "Sejarah",
+    sesi: "4",
+    hari: "2024-01-09",
+  },
+  {
+    id: "8",
+    nama: "Hendra Wijaya",
+    kelas: "12 (A)",
+    mataPelajaran: "Geografi",
+    sesi: "5",
+    hari: "2024-01-09",
+  },
 ];
 
+const SESSIONS_MAP = {
+  "1": {
+    waktu: "10.00–11.00",
+    subjek: ["Matematika", "Fisika"],
+    tutor: ["Pak Ahmad", "Bu Rina"],
+  },
+  "2": {
+    waktu: "13.00–14.30",
+    subjek: ["Kimia", "Biologi"],
+    tutor: ["Pak Budi", "Bu Siti"],
+  },
+  "3": {
+    waktu: "14.45–16.15",
+    subjek: ["Bahasa Inggris", "Sejarah"],
+    tutor: ["Bu Ani", "Pak Hendra"],
+  },
+  "4": {
+    waktu: "16.30–18.00",
+    subjek: ["Matematika", "Bahasa Indonesia"],
+    tutor: ["Pak Ahmad", "Bu Wati"],
+  },
+  "5": {
+    waktu: "18.30–20.00",
+    subjek: ["Geografi", "Sejarah"],
+    tutor: ["Pak Rudi", "Bu Eka"],
+  },
+};
+
 export default function ListOfParticipants() {
+  // keep the select states (they won't affect rendering)
   const [selectedDate, setSelectedDate] = useState("");
   const [filterMapel, setFilterMapel] = useState("");
+
+  // group once from mockStudents (filters are intentionally NOT applied)
+  const groupedSessions = useMemo<SessionGroup[]>(() => {
+    const filtered = [...mockStudents]; // copy just in case
+    const grouped: { [key: string]: SessionGroup } = {};
+
+    filtered.forEach((student) => {
+      const sessionInfo =
+        SESSIONS_MAP[student.sesi as keyof typeof SESSIONS_MAP];
+      const key = `${student.sesi}-${student.hari}`;
+
+      if (!grouped[key]) {
+        grouped[key] = {
+          waktu: sessionInfo?.waktu || "",
+          hari: student.hari,
+          subjek: sessionInfo?.subjek || [],
+          tutor: sessionInfo?.tutor || [],
+          students: [],
+        };
+      }
+
+      grouped[key].students.push(student);
+    });
+
+    return [...Object.values(grouped)].sort(
+      (a, b) => new Date(a.hari).getTime() - new Date(b.hari).getTime()
+    );
+    // no dependencies: computed once, unaffected by selectedDate/filterMapel
+  }, []);
+
+  // keep dropdown options (static from mock)
+  const uniqueDates = useMemo(() => {
+    return Array.from(new Set(mockStudents.map((s) => s.hari))).sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime()
+    );
+  }, []);
+
+  const uniqueMapel = useMemo(() => {
+    return Array.from(new Set(mockStudents.map((s) => s.mataPelajaran))).sort();
+  }, []);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  };
 
   return (
     <div className="min-h-screen bg-linear-to-br from-background via-background to-muted">
@@ -89,9 +211,14 @@ export default function ListOfParticipants() {
           </p>
         </motion.div>
 
-        {/* Filters (non-functional) */}
-        <div className="grid md:grid-cols-2 gap-4 mb-12">
-          <div className="space-y-2">
+        {/* Filters (UI only; they update state but do not affect the shown cards) */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid md:grid-cols-2 gap-4 mb-12"
+        >
+          <motion.div variants={itemVariants} className="space-y-2">
             <label className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2">
               <Calendar className="w-4 h-4" />
               Filter Tanggal
@@ -103,12 +230,19 @@ export default function ListOfParticipants() {
                         focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none custom-select-arrow"
             >
               <option value="">Semua Tanggal</option>
-              <option value="2024-01-08">Senin, 8 Januari 2024</option>
-              <option value="2024-01-09">Selasa, 9 Januari 2024</option>
+              {uniqueDates.map((date) => (
+                <option key={date} value={date}>
+                  {new Date(date).toLocaleDateString("id-ID", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </option>
+              ))}
             </select>
-          </div>
+          </motion.div>
 
-          <div className="space-y-2">
+          <motion.div variants={itemVariants} className="space-y-2">
             <label className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2">
               <Filter className="w-4 h-4" />
               Filter Mata Pelajaran
@@ -120,50 +254,113 @@ export default function ListOfParticipants() {
                         focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none custom-select-arrow"
             >
               <option value="">Semua Mata Pelajaran</option>
-              <option value="Matematika">Matematika</option>
-              <option value="Fisika">Fisika</option>
-              <option value="Kimia">Kimia</option>
+              {uniqueMapel.map((mapel) => (
+                <option key={mapel} value={mapel}>
+                  {mapel}
+                </option>
+              ))}
             </select>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        {/* STATIC CARD LIST */}
-        <div className="space-y-6">
-          {mockStudents.map((student) => (
-            <div
-              key={student.id}
-              className="bg-white rounded-xl border border-border overflow-hidden"
-            >
-              <div className="px-6 py-4 flex justify-between">
-                <div>
-                  <p className="font-semibold text-foreground">
-                    {student.nama}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {student.kelas}
-                  </p>
+        {/* Sessions List (cards unchanged; grouping precomputed and static) */}
+        {groupedSessions.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-12"
+          >
+            <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-20" />
+            <p className="text-muted-foreground text-lg">
+              Tidak ada data peserta untuk filter yang dipilih
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-6"
+          >
+            {groupedSessions.map((session, idx) => (
+              <motion.div
+                key={idx}
+                variants={itemVariants}
+                className="bg-white rounded-xl border border-border overflow-hidden hover:shadow-lg transition-all"
+              >
+                {/* Session Header */}
+                <div className="bg-linear-to-r from-primary/10 to-accent/10 border-b border-border px-6 py-4">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {new Date(session.hari).toLocaleDateString("id-ID", {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                      <h3 className="text-2xl font-bold text-foreground">
+                        {session.waktu}
+                      </h3>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div className="text-sm">
+                        <span className="font-semibold text-primary">
+                          Mata Pelajaran:
+                        </span>
+                        <p className="text-foreground">
+                          {session.subjek.join(", ")}
+                        </p>
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-semibold text-primary">
+                          Tutor:
+                        </span>
+                        <p className="text-foreground">
+                          {session.tutor.join(", ")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="inline-flex items-center px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
-                  {student.mataPelajaran}
+
+                {/* Students List */}
+                <div className="divide-y divide-border">
+                  {session.students.map((student, i) => (
+                    <motion.div
+                      key={student.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      viewport={{ once: true }}
+                      className="px-6 py-4 hover:bg-muted/30 transition-colors"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                          <p className="font-semibold text-foreground">
+                            {student.nama}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {student.kelas}
+                          </p>
+                        </div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
+                          {student.mataPelajaran}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
-              </div>
 
-              <div className="px-6 py-3 bg-muted/30 text-sm text-muted-foreground font-medium border-t border-border">
-                <Users className="w-4 h-4 inline mr-2" />
-                Sesi {student.sesi} —{" "}
-                {new Date(student.hari).toLocaleDateString("id-ID")}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Summary */}
-        <div className="mt-8 p-6 bg-primary/5 border border-primary/20 rounded-lg">
-          <p className="text-foreground font-semibold">
-            Total Peserta:{" "}
-            <span className="text-primary text-xl">{mockStudents.length}</span>
-          </p>
-        </div>
+                {/* Session Footer */}
+                <div className="px-6 py-3 bg-muted/30 text-sm text-muted-foreground font-medium border-t border-border">
+                  <Users className="w-4 h-4 inline mr-2" />
+                  Total {session.students.length} peserta terdaftar
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </div>
     </div>
   );
