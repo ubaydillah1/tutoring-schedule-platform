@@ -20,28 +20,13 @@ const navItems = [
   { icon: BarChart3, label: "Dashboard", href: "/admin/dashboard" },
   { icon: BookOpen, label: "Mata Pelajaran", href: "/admin/subjects" },
   { icon: Users, label: "Kelas", href: "/admin/classes" },
-  { icon: Calendar, label: "Kelola Sesi", href: "/admin/sessions" },
   { icon: Briefcase, label: "Kelola Tutor", href: "/admin/tutors" },
+  { icon: Calendar, label: "Kelola Sesi", href: "/admin/sessions" },
   { icon: Users, label: "Data Pendaftaran", href: "/admin/registrations" },
 ];
 
-const sessionStats = {
-  weekday: [
-    { name: "Sesi 1", time: "10.00–11.00", tutors: 1 },
-    { name: "Sesi 2", time: "13.00–14.30", tutors: 1 },
-    { name: "Sesi 3", time: "14.45–16.15", tutors: 1 },
-    { name: "Sesi 4", time: "16.30–18.00", tutors: 0 },
-    { name: "Sesi 5", time: "18.30–20.00", tutors: 1 },
-  ],
-  saturday: [
-    { name: "Sesi 1", time: "09.00–10.30", tutors: 1 },
-    { name: "Sesi 2", time: "10.30–12.00", tutors: 0 },
-  ],
-};
-
 export default function AdminNav() {
   const [open, setOpen] = useState(false);
-  const [expandSessions, setExpandSessions] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import type React from "react";
@@ -7,6 +8,8 @@ import { motion } from "framer-motion";
 import { Loader2, ArrowLeft, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import axiosInstance from "@/lib/axiosInstance";
+import { useAuthStore } from "@/stores/authStore";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -20,16 +23,17 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError("");
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const res = await axiosInstance.post("/auth/login", {
+        email,
+        password,
+      });
 
-    if (email === "admin@konsultasi.id" && password === "admin123") {
-      localStorage.setItem("adminToken", "demo-token");
+      useAuthStore.getState().login(res.data.data);
+
       router.push("/admin/dashboard");
-    } else {
-      setError(
-        "Email atau password salah. Gunakan admin@konsultasi.id / admin123"
-      );
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Terjadi kesalahan");
     }
 
     setLoading(false);
@@ -151,20 +155,6 @@ export default function AdminLoginPage() {
                 "Masuk"
               )}
             </motion.button>
-
-            {/* Demo Info */}
-            <motion.div
-              variants={itemVariants}
-              className="p-4 bg-primary/5 border border-primary/20 rounded-lg"
-            >
-              <p className="text-xs font-medium text-primary mb-2">
-                Demo Credentials:
-              </p>
-              <p className="text-xs text-foreground/70">
-                Email: admin@konsultasi.id
-              </p>
-              <p className="text-xs text-foreground/70">Password: admin123</p>
-            </motion.div>
           </motion.form>
         </motion.div>
       </div>

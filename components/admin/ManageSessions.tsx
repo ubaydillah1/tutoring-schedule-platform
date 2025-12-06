@@ -1,12 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { useSessions } from "@/hooks/useSessions";
+import { useTutors } from "@/hooks/useTutors";
+import { useSubjects } from "@/hooks/useSubjects";
 import SessionTutorManager from "./SessionTutorManager";
 
-// sesi tetap
-const WEEKDAY_SESSIONS = [
+const WEEKDAY = [
   { id: "1", name: "Sesi 1", waktu: "10.00–11.00" },
   { id: "2", name: "Sesi 2", waktu: "13.00–14.30" },
   { id: "3", name: "Sesi 3", waktu: "14.45–16.15" },
@@ -14,146 +17,116 @@ const WEEKDAY_SESSIONS = [
   { id: "5", name: "Sesi 5", waktu: "18.30–20.00" },
 ];
 
-const SATURDAY_SESSIONS = [
+const SATURDAY = [
   { id: "6", name: "Sesi 1", waktu: "09.00–10.30" },
   { id: "7", name: "Sesi 2", waktu: "10.30–12.00" },
 ];
 
 function formatDateKey(d: Date) {
-  return d.toISOString().slice(0, 10);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function ManageSessions() {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
-  const [dailySessionData, setDailySessionData] = useState<
-    Record<string, Record<string, { tutors: number }>>
-  >({});
-
   const dateKey = formatDateKey(selectedDate);
-  const day = selectedDate.getDay(); // 0 = Minggu
+
+  const day = selectedDate.getDay();
   const isSunday = day === 0;
 
-  // Tentukan sesi berdasarkan hari
-  const sessions = useMemo(() => {
+  const template = useMemo(() => {
     if (isSunday) return [];
-    if (day === 6) return SATURDAY_SESSIONS;
-    return WEEKDAY_SESSIONS;
+    if (day === 6) return SATURDAY;
+    return WEEKDAY;
   }, [day, isSunday]);
 
-  // Data default jika belum ada
-  const sessionDataForDate =
-    dailySessionData[dateKey] ||
-    Object.fromEntries(sessions.map((s) => [s.id, { tutors: 0 }]));
+  const { data: backend = [], isLoading } = useSessions(dateKey, {
+    enabled: !isSunday,
+  });
 
-  // update tutors
-  const updateTutorCount = (sessionId: string, newCount: number) => {
-    setDailySessionData((prev) => ({
-      ...prev,
-      [dateKey]: {
-        ...sessionDataForDate,
-        [sessionId]: { tutors: newCount },
-      },
-    }));
-  };
+  const { data: tutors = [] } = useTutors();
+  const { data: subjects = [] } = useSubjects();
 
-  // next/prev
-  const shiftDate = (days: number) => {
+  const merged = template.map((tpl) => {
+    const match = backend.find((b: any) => b.slotId === tpl.id);
+
+    return {
+      slotId: tpl.id,
+      instanceId: match?.id ?? null,
+      name: tpl.name,
+      waktu: tpl.waktu,
+      tutors: match?.tutors ?? [],
+      subjects: match?.subjects ?? [],
+    };
+  });
+
+  const shift = (delta: number) => {
     const d = new Date(selectedDate);
-    d.setDate(d.getDate() + days);
+    d.setDate(d.getDate() + delta);
     setSelectedDate(d);
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 15 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
-  };
-
   return (
-    <motion.main
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="p-4 sm:p-8 lg:pl-8 max-w-7xl mx-auto"
-    >
-      {/* HEADER */}
-      <motion.div variants={itemVariants} className="mb-10">
-        <h1 className="text-4xl font-bold text-foreground">
-          Kelola Sesi per Tanggal
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Atur jumlah tutor berdasarkan tanggal tertentu
+    <motion.main className="p-4 sm:p-8 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Kelola Sesi per Tanggal</h1>
+        <p className="text-muted-foreground">
+          Atur tutor & mata pelajaran berdasarkan tanggal.
         </p>
-      </motion.div>
+      </div>
 
-      {/* DATE NAVIGATOR */}
-      <motion.div
-        variants={itemVariants}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10"
-      >
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => shiftDate(-1)}
-            className="p-3 rounded-lg border border-border hover:bg-muted transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => shift(-1)} className="p-2 border rounded-lg">
+          <ChevronLeft />
+        </button>
 
-          <div className="px-4 py-3 rounded-lg border bg-white flex items-center gap-2 font-semibold">
-            <Calendar className="w-4 h-4 text-primary" />
-            {selectedDate.toLocaleDateString("id-ID", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          </div>
-
-          <button
-            onClick={() => shiftDate(1)}
-            className="p-3 rounded-lg border border-border hover:bg-muted transition-colors"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+        <div className="px-4 py-2 rounded-lg border bg-white flex items-center gap-2 font-semibold">
+          <Calendar className="w-4 h-4 text-primary" />
+          {selectedDate.toLocaleDateString("id-ID", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
         </div>
+
+        <button onClick={() => shift(1)} className="p-2 border rounded-lg">
+          <ChevronRight />
+        </button>
 
         <input
           type="date"
           value={dateKey}
+          className="ml-auto px-3 py-2 border rounded-lg"
           onChange={(e) => setSelectedDate(new Date(e.target.value))}
-          className="px-4 py-3 rounded-lg border border-border bg-white text-foreground"
         />
-      </motion.div>
+      </div>
 
-      {/* CONTENT */}
       {isSunday ? (
-        <motion.div
-          variants={itemVariants}
-          className="p-6 rounded-xl bg-muted/30 border text-center text-muted-foreground font-medium"
-        >
+        <div className="p-6 bg-muted/30 rounded-xl text-center text-muted-foreground">
           Hari Minggu libur. Tidak ada sesi.
-        </motion.div>
+        </div>
+      ) : isLoading ? (
+        <div className="text-muted-foreground">Memuat sesi…</div>
       ) : (
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid md:grid-cols-2 gap-6"
-        >
-          {sessions.map((session) => (
+        <div className="grid md:grid-cols-2 gap-6">
+          {merged.map((s) => (
             <SessionTutorManager
-              key={session.id}
-              sessionName={session.name}
-              sessionTime={session.waktu}
-              initialTutors={sessionDataForDate[session.id]?.tutors || 0}
-              onTutorsChange={(count) => updateTutorCount(session.id, count)}
+              key={`${s.slotId}-${dateKey}`}
+              slotId={s.slotId}
+              instanceId={s.instanceId}
+              sessionName={s.name}
+              sessionTime={s.waktu}
+              dateKey={dateKey}
+              existingTutors={s.tutors}
+              existingSubjects={s.subjects}
+              tutors={tutors}
+              subjects={subjects}
             />
           ))}
-        </motion.div>
+        </div>
       )}
     </motion.main>
   );

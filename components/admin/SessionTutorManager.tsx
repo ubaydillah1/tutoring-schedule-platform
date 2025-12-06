@@ -1,167 +1,207 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Users, Minus, Plus, BookOpen, Clock } from "lucide-react";
+import { Trash2, Clock, Users } from "lucide-react";
+import { useUpdateSession } from "@/hooks/useSessions";
 
-interface SessionTutorManagerProps {
-  sessionName: string;
-  sessionTime: string;
-  initialTutors: number;
-  onTutorsChange: (count: number) => void;
-  allTutors?: string[];
+interface Item {
+  id: string;
+  name: string;
 }
 
-const DEFAULT_TUTORS = [
-  "Pak Ahmad",
-  "Bu Rina",
-  "Pak Budi",
-  "Bu Siti",
-  "Bu Ani",
-  "Pak Hendra",
-  "Bu Wati",
-  "Pak Rudi",
-  "Bu Eka",
-];
+interface Props {
+  slotId: string;
+  instanceId: string | null;
+  sessionName: string;
+  sessionTime: string;
+  dateKey: string;
+  tutors: Item[];
+  subjects: Item[];
+  existingTutors: Item[];
+  existingSubjects: Item[];
+}
 
 export default function SessionTutorManager({
+  slotId,
+  instanceId,
   sessionName,
   sessionTime,
-  initialTutors = 0,
-  onTutorsChange,
-  allTutors = DEFAULT_TUTORS,
-}: SessionTutorManagerProps) {
-  const [tutorCount, setTutorCount] = useState(initialTutors);
+  dateKey,
+  tutors,
+  subjects,
+  existingTutors,
+  existingSubjects,
+}: Props) {
+  const [selectedTutors, setSelectedTutors] = useState(() =>
+    existingTutors.map((t) => t.id)
+  );
 
-  const handleAddTutor = () => {
-    const newCount = tutorCount + 1;
-    setTutorCount(newCount);
-    onTutorsChange(newCount);
+  const [selectedSubjects, setSelectedSubjects] = useState(() =>
+    existingSubjects.map((s) => s.id)
+  );
+
+  const updateMutation = useUpdateSession();
+
+  const hasChanges = useMemo(() => {
+    const eq = (a: any[], b: any[]) =>
+      a.length === b.length && a.every((v, i) => v === b[i]);
+
+    return (
+      !eq(
+        existingTutors.map((t) => t.id),
+        selectedTutors
+      ) ||
+      !eq(
+        existingSubjects.map((s) => s.id),
+        selectedSubjects
+      )
+    );
+  }, [selectedTutors, selectedSubjects, existingTutors, existingSubjects]);
+
+  const save = () => {
+    updateMutation.mutate({
+      slotId,
+      instanceId,
+      date: dateKey,
+      tutorIds: selectedTutors,
+      subjectIds: selectedSubjects,
+    });
   };
-
-  const handleRemoveTutor = () => {
-    if (tutorCount > 0) {
-      const newCount = tutorCount - 1;
-      setTutorCount(newCount);
-      onTutorsChange(newCount);
-    }
-  };
-
-  const maxStudents = tutorCount * 10;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-linear-to-br from-white to-muted/30 border border-border rounded-xl p-6 hover:shadow-lg transition-shadow"
-    >
-      {/* Session Header */}
-      <div className="flex items-start justify-between mb-6">
+    <motion.div className="bg-white border rounded-xl p-6 shadow-sm hover:shadow-md transition">
+      {/* HEADER */}
+      <div className="flex justify-between mb-4">
         <div>
-          <h3 className="text-lg font-bold text-foreground">{sessionName}</h3>
-          <div className="flex items-center gap-2 mt-1">
-            <Clock className="w-4 h-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">{sessionTime}</p>
+          <h3 className="font-semibold text-lg">{sessionName}</h3>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Clock className="w-4 h-4" />
+            {sessionTime}
           </div>
         </div>
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-bold ${
-            tutorCount > 0
-              ? "bg-primary/20 text-primary"
-              : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {tutorCount} {tutorCount === 1 ? "Tutor" : "Tutors"}
-        </span>
-      </div>
 
-      {/* Tutor Count Selector */}
-      <div className="mb-6 p-4 bg-muted/50 rounded-lg border border-border">
-        <div className="flex items-center justify-between mb-4">
-          <label className="flex items-center gap-2 font-semibold text-foreground">
-            <Users className="w-4 h-4 text-primary" />
-            Jumlah Tutor
-          </label>
-          <span className="text-2xl font-bold text-primary">{tutorCount}</span>
-        </div>
-
-        {/* Increment/Decrement Buttons */}
-        <div className="flex gap-3">
-          <motion.button
-            whileHover={{ scale: tutorCount > 0 ? 1.05 : 1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleRemoveTutor}
-            disabled={tutorCount === 0}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-destructive text-destructive hover:bg-destructive/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-semibold"
-          >
-            <Minus className="w-5 h-5" />
-            Kurangi
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: tutorCount < 3 ? 1.05 : 1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleAddTutor}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-primary text-primary hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-semibold"
-          >
-            <Plus className="w-5 h-5" />
-            Tambah
-          </motion.button>
+        <div className="px-3 py-1 rounded-full text-xs bg-primary/20 text-primary font-bold flex items-center">
+          {selectedTutors.length} Tutor
         </div>
       </div>
 
-      {/* Capacity Info */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="p-4 rounded-lg bg-linear-to-r from-primary/10 to-accent/10 border border-primary/20"
-      >
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
-              Kapasitas Maksimal
-            </p>
-            <p className="text-2xl font-bold text-foreground">
-              {maxStudents} murid
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {tutorCount} tutor × 10 murid/tutor
-            </p>
-          </div>
-          <div className="p-3 rounded-lg bg-primary/20">
-            <BookOpen className="w-6 h-6 text-primary" />
-          </div>
-        </div>
-      </motion.div>
+      {/* TUTORS */}
+      <div className="mb-4 p-3 border rounded-lg bg-muted/40">
+        <div className="font-semibold mb-2">Tutor</div>
 
-      {/* Tutor List Preview */}
-      {tutorCount > 0 && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="mt-4 pt-4 border-t border-border"
-        >
-          <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
-            Tutor Tersedia
-          </p>
-          <div className="space-y-1">
-            {allTutors.slice(0, tutorCount).map((tutor, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20"
+        <div className="flex flex-wrap gap-2 mb-3">
+          {selectedTutors.map((id) => {
+            const t = tutors.find((x) => x.id === id);
+            return (
+              <span
+                key={id}
+                className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full flex items-center gap-2"
               >
-                <div className="w-2 h-2 rounded-full bg-primary" />
-                <span className="text-sm font-medium text-foreground">
-                  {tutor}
-                </span>
-              </motion.div>
+                {t?.name}
+                <Trash2
+                  className="w-4 h-4 text-red-500 cursor-pointer"
+                  onClick={() =>
+                    setSelectedTutors((prev) => prev.filter((x) => x !== id))
+                  }
+                />
+              </span>
+            );
+          })}
+        </div>
+
+        <select
+          className="w-full px-3 py-2 bg-white border rounded-lg"
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val && !selectedTutors.includes(val))
+              setSelectedTutors((prev) => [...prev, val]);
+            e.target.value = "";
+          }}
+        >
+          <option value="">Tambah tutor…</option>
+          {tutors
+            .filter((t) => !selectedTutors.includes(t.id))
+            .map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
             ))}
+        </select>
+      </div>
+
+      {/* SUBJECTS */}
+      <div className="mb-4 p-3 border rounded-lg bg-muted/40">
+        <div className="font-semibold mb-2">Mata Pelajaran (maks 2)</div>
+
+        <div className="flex flex-wrap gap-2 mb-3">
+          {selectedSubjects.map((id) => {
+            const s = subjects.find((x) => x.id === id);
+            return (
+              <span
+                key={id}
+                className="px-3 py-1 bg-secondary/10 border border-secondary/20 rounded-full flex items-center gap-2"
+              >
+                {s?.name}
+                <Trash2
+                  className="w-4 h-4 text-red-500 cursor-pointer"
+                  onClick={() =>
+                    setSelectedSubjects((prev) => prev.filter((x) => x !== id))
+                  }
+                />
+              </span>
+            );
+          })}
+        </div>
+
+        {/* SUBJECT DROPDOWN HILANG JIKA 2 SUDAH TERISI */}
+        {selectedSubjects.length < 2 && (
+          <select
+            className="w-full px-3 py-2 bg-white border rounded-lg"
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val && !selectedSubjects.includes(val))
+                setSelectedSubjects((prev) => [...prev, val]);
+              e.target.value = "";
+            }}
+          >
+            <option value="">Tambah mata pelajaran…</option>
+            {subjects
+              .filter((s) => !selectedSubjects.includes(s.id))
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+          </select>
+        )}
+      </div>
+
+      {/* CAPACITY BOX */}
+      <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg mb-4 flex items-center justify-between">
+        <div>
+          <div className="text-xs uppercase text-muted-foreground">
+            Kapasitas Maksimal
           </div>
-        </motion.div>
-      )}
+          <div className="text-2xl font-bold">10 murid</div>
+        </div>
+
+        <Users className="w-10 h-10 text-primary opacity-70" />
+      </div>
+
+      {/* SAVE BUTTON */}
+      <button
+        onClick={save}
+        disabled={!hasChanges || updateMutation.isPending}
+        className={`w-full py-2 rounded-lg font-semibold transition ${
+          hasChanges
+            ? "bg-primary text-white hover:bg-primary/90"
+            : "opacity-50 cursor-not-allowed bg-gray-300 text-gray-600"
+        }`}
+      >
+        {updateMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
+      </button>
     </motion.div>
   );
 }

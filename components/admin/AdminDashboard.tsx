@@ -1,8 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BarChart3, BookOpen, Users, Calendar } from "lucide-react";
-import Link from "next/link";
+import { BookOpen, Users, Calendar } from "lucide-react";
 
 const stats = [
   {
@@ -35,13 +34,6 @@ const stats = [
   },
 ];
 
-const quickActions = [
-  { label: "Tambah Mata Pelajaran", href: "/admin/subjects", icon: BookOpen },
-  { label: "Tambah Kelas", href: "/admin/classes", icon: Users },
-  { label: "Kelola Sesi & Tutor", href: "/admin/sessions", icon: Calendar },
-  { label: "Lihat Pendaftaran", href: "/admin/registrations", icon: BarChart3 },
-];
-
 import { Briefcase } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -68,7 +60,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <motion.div variants={itemVariants} className="mb-12">
         <h1 className="text-4xl font-bold text-foreground mb-2">
-          Selamat Datang, Admin
+          Selamat Datang, Admin (This page still in progress)
         </h1>
         <p className="text-muted-foreground">
           Kelola platform konsultasi belajar Anda
