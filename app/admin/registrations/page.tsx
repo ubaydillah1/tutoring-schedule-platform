@@ -3,7 +3,7 @@ import ViewRegistrations from "@/components/admin/ViewRegistrations";
 import { redirect } from "next/navigation";
 
 export default function AdminRegistrationsPage() {
-  redirect("/admin/dashboard");
+  redirect("/participant");
   return;
   return (
     <div className="min-h-screen bg-background flex">
